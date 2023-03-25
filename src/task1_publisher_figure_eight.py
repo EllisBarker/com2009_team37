@@ -9,6 +9,7 @@ class FigureEightPublisher():
         topic_name = "cmd_vel"
         self.pub = rospy.Publisher(topic_name, Twist, queue_size=10)
         rospy.init_node(self.node_name, anonymous=True)
+        # Information published at 1Hz
         self.rate = rospy.Rate(1) 
         self.ctrl_c = False 
         self.current_loop = 1
@@ -26,6 +27,7 @@ class FigureEightPublisher():
         while not self.ctrl_c:
             vel_cmd = Twist()
             vel_cmd.linear.x = 0.10471975512 # m/s ((pi * 1 metre diameter) / 30 seconds)
+            # Determine the direction of angular velocity for each loop
             if self.current_loop == 1:
                 vel_cmd.angular.z = (2 * math.pi) / 30 # rad/s
             elif self.current_loop == 2:
