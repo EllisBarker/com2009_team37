@@ -26,7 +26,7 @@ class FigureEightPublisher():
     def main_loop(self):
         while not self.ctrl_c:
             vel_cmd = Twist()
-            vel_cmd.linear.x = 0.10471975512 # m/s ((pi * 1 metre diameter) / 30 seconds)
+            vel_cmd.linear.x = (math.pi * 1) / 30 # m/s ((pi * 1 metre diameter) / 30 seconds)
             # Determine the direction of angular velocity for each loop
             if self.current_loop == 1:
                 vel_cmd.angular.z = (2 * math.pi) / 30 # rad/s
