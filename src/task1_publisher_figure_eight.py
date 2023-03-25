@@ -27,9 +27,9 @@ class FigureEightPublisher():
             vel_cmd = Twist()
             vel_cmd.linear.x = 0.10471975512 # m/s ((pi * 1 metre diameter) / 30 seconds)
             if self.current_loop == 1:
-                vel_cmd.angular.z = - (2 * math.pi) / 30 # rad/s
-            elif self.current_loop == 2:
                 vel_cmd.angular.z = (2 * math.pi) / 30 # rad/s
+            elif self.current_loop == 2:
+                vel_cmd.angular.z = - (2 * math.pi) / 30 # rad/s
             # CONDITIONAL HERE TO CHANGE THE VALUE OF CURRENT LOOP DEPENDING ON SOMETHING
             self.pub.publish(vel_cmd)
             self.rate.sleep()
