@@ -1,6 +1,4 @@
 <launch>
-  <node pkg="com2009_team37" type="task1_publisher_figure_eight.py" name="pub_node" output="screen">
-  </node>
-  <node pkg="com2009_team37" type="task1_odom_subscriber.py" name="sub_node" output="screen">
+  <node pkg="com2009_team37" type="task1_move_figure_eight.py" name="task1" output="screen">
   </node>
 </launch>
