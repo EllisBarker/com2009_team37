@@ -29,7 +29,7 @@ class OdomSubscriber():
             self.zero_reading_found = True
 
         # Output robot position and angle information
-        print(f"x={(position.x - abs(self.init_position[0])):.2f} [m], y={(position.y - abs(self.init_position[1])):.2f} [m], yaw={((euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w], 'sxyz')[2]) *(180/math.pi) - abs(self.init_position[2])):.1f} [degrees]")
+        print(f"x={(abs(position.x) - abs(self.init_position[0])):.2f} [m], y={(abs(position.y) - abs(self.init_position[1])):.2f} [m], yaw={((abs(euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w], 'sxyz')[2]) *(180/math.pi)) - abs(self.init_position[2])):.1f} [degrees]")
 
     def main_loop(self):
         # Subscriber node remains active until closed
