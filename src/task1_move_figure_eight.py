@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+from logging import shutdown
+from multiprocessing.sharedctypes import Value
 import rospy
 from geometry_msgs.msg import Twist 
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
-from math import pi
+from math import sqrt, pi
 
 class FigureEight():
     def callback(self, topic_data: Odometry):
@@ -13,6 +15,9 @@ class FigureEight():
         position = pose.position
         orientation = pose.orientation 
 
+        self.x = position.x
+        self.y = position.y
+
         # Define reference measurements immediately to calibrate future readings
         if self.zero_reading_found == False:
             self.init_position = [position.x, position.y, 
@@ -20,6 +25,8 @@ class FigureEight():
                                                           orientation.z, orientation.w], 
                                                           'sxyz')[2])*(180/pi)]
             self.zero_reading_found = True
+            self.x0 = self.x
+            self.y0 = self.y
 
         # Output robot position and angle information
         print(f"x={(abs(position.x) - abs(self.init_position[0])):.2f} [m], y={(abs(position.y) - abs(self.init_position[1])):.2f} [m], yaw={((abs(euler_from_quaternion([orientation.x, orientation.y, orientation.z, orientation.w], 'sxyz')[2]) *(180/pi)) - abs(self.init_position[2])):.1f} [degrees]")
@@ -41,6 +48,12 @@ class FigureEight():
         self.ctrl_c = False 
         self.current_loop = 1
 
+        self.x0 = 0
+        self.y0 = 0
+        self.x = 0
+        self.y = 0
+        self.distance_travelled = 0
+
         rospy.on_shutdown(self.shutdown)
         rospy.loginfo(f"Task 1: '{self.node_name}' node is active...") 
 
@@ -57,7 +70,19 @@ class FigureEight():
                 self.vel.angular.z = (2 * pi) / 30 # rad/s
             elif self.current_loop == 2:
                 self.vel.angular.z = - (2 * pi) / 30 # rad/s
-            # CONDITIONAL HERE TO CHANGE THE VALUE OF CURRENT LOOP DEPENDING ON SOMETHING
+
+            # Change what loop is being travelled across based on the distance travelled (1 circumference or 2 or more)
+            try:
+                self.distance_travelled += (sqrt(((self.x - self.x0)**2) + ((self.y - self.y0)**2)))
+            except ValueError:
+                self.distance_travelled += 0
+            self.x0 = self.x
+            self.y0 = self.y
+            if self.distance_travelled >= pi and self.distance_travelled < 2 * pi:
+                self.current_loop = 2
+            elif self.distance_travelled > 2 * pi:
+                self.shutdown()
+
             self.pub.publish(self.vel)
             self.rate.sleep()
 
