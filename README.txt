@@ -1,0 +1,2 @@
+Task 1 uses a time-based decision-making process for determining the loop of the figure eight that it is currently on that may be affected by the ROS node's upkeep on the wireless access point.
+If the WaffleBot stutters or completely stops during the roslaunch, 'rosrun com2009_team37 task1_move_figure_eight.py' is an alternative to run the same code.
