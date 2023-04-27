@@ -34,7 +34,6 @@ class FigureEight():
         self.init_position = []
 
         self.vel = Twist()
-        self.vel.linear.x = (pi * 1) / 30 # m/s ((pi * 1 metre diameter) / 30 seconds)
         self.pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.sub = rospy.Subscriber("odom", Odometry, self.callback)
         rospy.init_node(self.node_name, anonymous=True)
@@ -57,19 +56,20 @@ class FigureEight():
 
     def main_loop(self):
         while not self.ctrl_c:
+            self.vel.linear.x = (pi * 1) / 30 # m/s ((pi * 1 metre diameter) / 30 seconds)
             # Determine the direction of angular velocity for each loop
             if self.current_loop == 1:
                 self.vel.angular.z = (2 * pi) / 30 # rad/s
             elif self.current_loop == 2:
                 self.vel.angular.z = - (2 * pi) / 30 # rad/s
 
-            if (rospy.get_rostime().secs - self.start_time.secs) > 29.5:
+            if (rospy.get_rostime().secs - self.start_time.secs) > 31: # originally 29.5 seconds in simulation, adjusted for real robot
                 self.current_loop = 2
-            if (rospy.get_rostime().secs - self.start_time.secs) > 60:
+            if (rospy.get_rostime().secs - self.start_time.secs) > 62: # originally 60 seconds in simulation, adjusted for real robot
                 self.shutdown()
 
+            rospy.sleep(0.001)
             self.pub.publish(self.vel)
-            self.rate.sleep()
 
 if __name__ == '__main__': 
     node = FigureEight() 
