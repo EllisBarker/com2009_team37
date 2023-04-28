@@ -33,6 +33,7 @@ class SearchActionServer():
         self.posy0 = self.tb3_odom.posy
         self.closest_object = self.tb3_lidar.min_distance
         self.closest_object_location = self.tb3_lidar.closest_object_position
+        self.vel_controller.set_move_cmd(goal.fwd_velocity, 0.0)
 
         # while true:
             # if not close:
