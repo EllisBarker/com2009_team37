@@ -33,6 +33,7 @@ class SearchActionServer():
         self.posy0 = self.tb3_odom.posy
         self.closest_object = self.tb3_lidar.min_distance
         self.closest_object_location = self.tb3_lidar.closest_object_position
+
         self.vel_controller.set_move_cmd(vel, 0.0)
 
         # while true:
@@ -40,6 +41,7 @@ class SearchActionServer():
                 # update values and publish feedback
             # else if close:
                 # publish velocity commands, update values
+                ###(CHANGE ANGULAR VELOCITY (also make linear 0) AND TIME OF ROTATION)
 
         if success:
             rospy.loginfo("Search completed successfully.")
