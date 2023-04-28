@@ -25,7 +25,7 @@ class SearchActionServer():
     def action_server_launcher(self, goal: SearchGoal):
         rate = rospy.Rate(10)
 
-        success = False
+        success = True
         vel = goal.fwd_velocity
         dist = goal.approach_distance
 
@@ -33,6 +33,12 @@ class SearchActionServer():
         self.posy0 = self.tb3_odom.posy
         self.closest_object = self.tb3_lidar.min_distance
         self.closest_object_location = self.tb3_lidar.closest_object_position
+
+        # while true:
+            # if not close:
+                # update values and publish feedback
+            # else if close:
+                # publish velocity commands, update values
 
         if success:
             rospy.loginfo("Search completed successfully.")
