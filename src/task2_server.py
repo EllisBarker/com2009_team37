@@ -11,7 +11,7 @@ class SearchActionServer():
     result = SearchResult()
 
     def __init__(self):
-        self.actionserver = actionlib.SimpleActionServer("/search_action_server", SearchAction, self.action_server_launcher, auto_start=False)
+        self.actionserver = actionlib.SimpleActionServer("/task_2_search", SearchAction, self.action_server_launcher, auto_start=False)
         self.actionserver.start()
 
         # useful publisher/subscriber functions from tb3
@@ -23,7 +23,20 @@ class SearchActionServer():
 
     # the 'callback' function of the server
     def action_server_launcher(self, goal: SearchGoal):
-        pass
+        rate = rospy.Rate(10)
+
+        success = False
+        vel = goal.fwd_velocity
+        dist = goal.approach_distance
+
+        self.posx0 = self.tb3_odom.posx
+        self.posy0 = self.tb3_odom.posy
+        self.closest_object = self.tb3_lidar.min_distance
+        self.closest_object_location = self.tb3_lidar.closest_object_position
+
+        if success:
+            rospy.loginfo("Search completed successfully.")
+
 
 if __name__ == '__main__':
     rospy.init_node("search_action_server")
