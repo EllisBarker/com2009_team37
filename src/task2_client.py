@@ -33,6 +33,7 @@ class SearchActionClient():
     def main_loop(self):
         self.goal.approach_distance = 0.4 # metres
         self.goal.fwd_velocity = 0.15 # m/s
+        self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
         
 if __name__ == '__main__':
     node = SearchActionClient()
