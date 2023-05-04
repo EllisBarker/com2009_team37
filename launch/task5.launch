@@ -1,0 +1,4 @@
+<launch>
+    <arg name="target_colour"/>
+    <node pkg="com2009_team37" type="task5" name="task" output="screen" args="-colour $(arg target_colour)"/>
+</launch>
