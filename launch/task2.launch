@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="com2009_team37" type="task2_server.py" name="search_action_server" output="screen">
+  <node pkg="com2009_team37" type="task2_client.py" name="search_action_client" output="screen">
+  </node>
+</launch>
