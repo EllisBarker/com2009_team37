@@ -1,0 +1,16 @@
+<launch>
+  <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+  <arg name="x_pos" default="-2.088"/>
+  <arg name="y_pos" default="-2.027"/>
+  <arg name="z_pos" default="0.0"/>
+  <arg name="yaw" default="1.572"/>
+
+  <include file="$(find com2009_simulations)/launch/beacon_colours.launch">
+    <arg name="start_zone" value="a"/>
+  </include>
+   
+  <node pkg="com2009_team37" type="task4_beaconing.py" name="publisher" output="screen">
+  </node>
+  <node pkg="com2009_team37" type="laser_sub.py" name="subscriber" output="screen">
+  </node>
+</launch>
