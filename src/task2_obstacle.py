@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import rospy
-from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
+from tb3_task2 import Tb3Move, Tb3Odometry, Tb3LaserScan
 import random
 
 class ObstacleAvoidance():
@@ -15,6 +15,9 @@ class ObstacleAvoidance():
         # Information published at 10Hz
         self.rate = rospy.Rate(1000) 
         self.ctrl_c = False 
+        self.turning = False
+        # Turn direction of 0 implies right, direction of 1 implies left
+        self.direction = 0
         rospy.sleep(0.01)
 
         rospy.on_shutdown(self.shutdown)
@@ -32,14 +35,25 @@ class ObstacleAvoidance():
             self.closest_object_location = self.tb3_lidar.closest_object_position
 
             print (self.tb3_lidar.min_distance)
-            if self.tb3_lidar.min_distance > 0.5: # approach distance
-                self.vel_controller.set_move_cmd(linear=0.2, angular=0.0)
+            if self.tb3_lidar.min_distance > 0.43: # approach distance
+                self.vel_controller.set_move_cmd(linear=0.26, angular=0.0)
+                self.vel_controller.publish()
+                self.turning = False
             else:
-                self.vel_controller.set_move_cmd(linear=-1.0, angular=0.0)
-                rospy.sleep(1)
-                self.vel_controller.set_move_cmd(linear=0.0, angular=1.0)
-                rospy.sleep(random.random()*3)
-            self.vel_controller.publish()
+                # DECIDE TURNING DIRECTION BASED ON ANGLE READINGS?
+                # (e.g. almost parallel to a wall means position of closest object is in the outer range and only needs a slight turn)
+
+                # Only move backwards once upon detecting an obstacle and pick a direction to turn
+                if self.turning == False:
+                    self.vel_controller.set_move_cmd(linear=-1.3, angular=0.0)
+                    self.vel_controller.publish()
+                    rospy.sleep(0.5)
+                    self.turning = True
+                    self.direction = random.choice([0,1])
+                self.vel_controller.set_move_cmd(linear=0.0, angular=[1.0,-1.0][self.direction])
+                self.vel_controller.publish()
+                rospy.sleep(random.random())
+            
 
 if __name__ == '__main__': 
     node = ObstacleAvoidance() 
