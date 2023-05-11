@@ -29,12 +29,10 @@ class ObstacleAvoidance():
         self.ctrl_c = True
 
     def main_loop(self):
-        print ("TEST")
         while not self.ctrl_c:
             self.closest_object = self.tb3_lidar.min_distance
             self.closest_object_location = self.tb3_lidar.closest_object_position
 
-            print (self.tb3_lidar.min_distance)
             if self.tb3_lidar.min_distance > 0.43: # approach distance
                 self.vel_controller.set_move_cmd(linear=0.26, angular=0.0)
                 self.vel_controller.publish()
@@ -50,6 +48,7 @@ class ObstacleAvoidance():
                     rospy.sleep(0.5)
                     self.turning = True
                     self.direction = random.choice([0,1])
+                # Start rotating for an amount of time between 0 and 1 seconds
                 self.vel_controller.set_move_cmd(linear=0.0, angular=[1.0,-1.0][self.direction])
                 self.vel_controller.publish()
                 rospy.sleep(random.random())
