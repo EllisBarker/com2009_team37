@@ -22,10 +22,13 @@ class Exploration():
             Image, self.camera_callback)
         self.cvbridge_interface = CvBridge()
 
-        # Map-realted functionality
+        # Map-related functionality
         self.map_path = "com2009_team37/maps/task5_map"
 
+        # Movement and sensor controllers
         self.robot_controller = Tb3Move()
+        self.tb3_odom = Tb3Odometry()
+        self.tb3_lidar = Tb3LaserScan()
 
         # Shutdown-related operations
         self.ctrl_c = False
