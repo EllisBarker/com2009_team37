@@ -17,19 +17,24 @@ class Exploration():
         node_name = "exploration"
         rospy.init_node(node_name)
 
+        # Camera-related functionality
         self.camera_subscriber = rospy.Subscriber("/camera/rgb/image_raw",
             Image, self.camera_callback)
         self.cvbridge_interface = CvBridge()
 
         self.robot_controller = Tb3Move()
 
+        # Shutdown-related operations
         self.ctrl_c = False
         rospy.on_shutdown(self.shutdown_ops)
 
         self.rate = rospy.Rate(5)
         
+        # Colour-related values
         self.m00 = 0
         self.m00_min = 10000
+        self.target_colour = rospy.get_param('/task5/target_colour')
+        rospy.loginfo(f"TASK 5 BEACON: The target is {self.target_colour}.")
 
     def shutdown_ops(self):
         self.robot_controller.stop()

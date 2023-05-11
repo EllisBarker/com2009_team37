@@ -12,7 +12,6 @@ class ObstacleAvoidance():
         self.tb3_odom = Tb3Odometry()
         self.tb3_lidar = Tb3LaserScan()
 
-        # Information published at 10Hz
         self.rate = rospy.Rate(1000) 
         self.ctrl_c = False 
         self.turning = False
