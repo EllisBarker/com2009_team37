@@ -10,9 +10,10 @@ from cv_bridge import CvBridge, CvBridgeError
 from laser_distance import LaserDistance
 # Import all the necessary ROS message types:
 from sensor_msgs.msg import Image
-import numpy as np
+import random
 # Import some other modules from within this package
 from tb3 import Tb3Move
+from tb3_task2 import Tb3LaserScan
 
 class ColourSearch(object):
 
@@ -22,11 +23,11 @@ class ColourSearch(object):
 
         self.vel_controller = Tb3Move()
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
+        self.tb3_lidar = Tb3LaserScan()
         self.laser_sub = LaserDistance()
 
         self.find_target_colour_phase = False
         self.target_colour = None
-        # THESE VALUES NEED TO CHANGE
         self.colour_ranges = [["green",(40,150,100),(65,255,255)],
                               ["blue",(115,225,100),(130,255,255)],
                               ["red1",(0,188,100),(4,255,255)],
@@ -36,6 +37,9 @@ class ColourSearch(object):
                               ["turquoise",(84,150,100),(96,255,255)]]
         self.m00_min = 10000
 
+        self.turning = False
+        # Turn direction of 0 implies right, direction of 1 implies left
+        self.direction = 0
         self.approach_phase = False
         self.min_distance = 0.2
         self.max_distance = 0.6
@@ -75,7 +79,6 @@ class ColourSearch(object):
                 mask = mask + cv2.inRange(hsv_img, self.colour_ranges[3][1], self.colour_ranges[3][2])
             if colour[0] == "red2":
                 mask = mask + cv2.inRange(hsv_img, self.colour_ranges[2][1], self.colour_ranges[2][2])
-            print (mask)
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if len(contours) != 0:
                 for contour in contours:
@@ -137,11 +140,12 @@ class ColourSearch(object):
                 self.vel_controller.publish()
                 rospy.sleep(2)
 
-                self.ctrl_c = True
-
             else:
-                pass
-                # OBJECT AVOIDANCE CODE FROM TASK 2
+                if self.approach_phase == False:
+                    pass
+                    # OBSTACLE AVOIDANCE CODE
+                else:
+                    pass
                 # IF TARGET COLOUR DETECTED THEN START APPROACHING
         
 
