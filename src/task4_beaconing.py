@@ -24,12 +24,8 @@ class ColourSearch(object):
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
         self.laser_sub = LaserDistance()
 
-        self.current_angular_z = 0.0
-        self.current_linear_x = 0.0
-
+        self.find_target_colour = False
         self.target_colour = None
-        self.target_lower = -999
-        self.target_upper = 999
         self.colour_ranges = [["green",(35,90,100),(79,255,255)],
                               ["blue",(100,90,100),(140,255,255)],
                               ["red1",(0,90,100),(22,255,255)],
@@ -37,10 +33,9 @@ class ColourSearch(object):
                               ["yellow",(22,90,100),(35,255,255)],
                               ["purple",(140,90,100),(165,255,255)],
                               ["turquoise",(79,90,100),(100,255,255)]]
-        self.m00 = 0
         self.m00_min = 10000
-        self.hsv_img = None
 
+        self.approach_phase = False
         self.min_distance = 0.2
         self.max_distance = 0.6
 
@@ -72,6 +67,7 @@ class ColourSearch(object):
         detected_colour = None
         detected_colour_contour = None
         detected_colour_contour_area = 0
+        # Create masks and contours for each colour available to obtain the contour of the greatest area
         for colour in self.colour_ranges:
             mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -82,30 +78,25 @@ class ColourSearch(object):
                         detected_colour_contour_area = cv2.contourArea(contour)
                         detected_colour = colour[0]
         
-        # IF CONTOUR FOUND AND TARGET COLOUR IS NOT NONE
-            # FIND MOMENTS
-            # IF DETECTED COLOUR = TARGET COLOUR
-                # LOG MESSAGE
-                # SET BOOLEAN THAT ALLOWS BYPASS OF OBSTACLE AVOIDANCE CODE
-                # SET VALUES THAT AID THE TURNING BASED ON MOMENTS
-            # ELSE
-                # it's all chill and stuff
+        # Check for if the target colour has already been determined or if contour was generated
+        if detected_colour_contour != None and self.target_colour != None:
+            if detected_colour == self.target_colour:
+                # Use moments-related information to determine appropriate turning angle
+                m = cv2.moments(detected_colour_contour)
+                cx = m['m10'] / (m['m00'] + 1e-5)
+                cy = m['m01'] / (m['m00'] + 1e-5)
+                cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
+                print("TARGET DETECTED: Beaconing initiated.")
+                self.approach_phase = True
+                # SET VALUES THAT AID THE TURNING BASED ON MOMENTS???
+        # First-time setup for target colour if it is in the 'find target colour' phase
+        elif self.target_colour == None:
+            if self.find_target_colour == True:
+                self.target_colour = detected_colour
+                print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
-
-    #def find_target_colour(self):
-    #    max_m = 0
-    #    for colour in self.colour_ranges:
-    #        mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
-    #        m = cv2.moments(mask, binaryImage = True)
-    #        print (mask)
-    #        print (colour[0])
-    #        if max_m < m['m00']:
-    #            self.target_colour = colour[0]
-    #            print (colour[0])
-    #            print (self.target_colour)
-    #            max_m = m['m00']
 
     def main(self):
         while not self.ctrl_c:
@@ -118,9 +109,8 @@ class ColourSearch(object):
 
                 self.vel_controller.set_move_cmd(0.0, 0.0)
                 self.vel_controller.publish()
+                self.find_target_colour = True
                 rospy.sleep(1)
-                #self.find_target_colour()
-                print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
                 #self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
                 #self.vel_controller.publish()
