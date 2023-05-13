@@ -24,16 +24,16 @@ class ColourSearch(object):
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
         self.laser_sub = LaserDistance()
 
-        self.find_target_colour = False
+        self.find_target_colour_phase = False
         self.target_colour = None
         # THESE VALUES NEED TO CHANGE
-        self.colour_ranges = [["green",(35,90,100),(79,255,255)],
-                              ["blue",(100,90,100),(140,255,255)],
-                              ["red1",(0,90,100),(22,255,255)],
-                              ["red2",(165,90,100),(180,255,255)],
-                              ["yellow",(22,90,100),(35,255,255)],
-                              ["purple",(140,90,100),(165,255,255)],
-                              ["turquoise",(79,90,100),(100,255,255)]]
+        self.colour_ranges = [["green",(40,150,100),(65,255,255)],
+                              ["blue",(115,225,100),(130,255,255)],
+                              ["red1",(0,188,100),(4,255,255)],
+                              ["red2",(175,200,100),(180,255,255)],
+                              ["yellow",(25,120,100),(35,255,255)],
+                              ["purple",(143,153,100),(157,255,255)],
+                              ["turquoise",(84,150,100),(96,255,255)]]
         self.m00_min = 10000
         self.hsv_img = None
 
@@ -101,12 +101,19 @@ class ColourSearch(object):
                 # SET VALUES THAT AID THE TURNING BASED ON MOMENTS???
         # First-time setup for target colour if it is in the 'find target colour' phase
         elif self.target_colour == None:
-            if self.find_target_colour == True:
+            if self.find_target_colour_phase == True:
                 self.target_colour = detected_colour
                 print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
+
+    def find_target_colour(self):
+        for colour in self.colour_ranges:
+            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+            print (mask)
+            if mask.any():
+                self.target_colour = colour[0]
 
     def main(self):
         while not self.ctrl_c:
@@ -124,7 +131,9 @@ class ColourSearch(object):
                 self.vel_controller.set_move_cmd(0.0, 0.0)
                 self.vel_controller.publish()
                 rospy.sleep(1)
-                self.find_target_colour = True
+                self.find_target_colour()
+                self.find_target_colour_phase = False
+                
 
                 self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
                 self.vel_controller.publish()
