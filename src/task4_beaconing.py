@@ -20,47 +20,46 @@ class ColourSearch(object):
         rospy.init_node('color_detect_node', anonymous=True)
         self.bridge = CvBridge()
 
-        self.robot_controller = Tb3Move()
+        self.vel_controller = Tb3Move()
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
         self.laser_sub = LaserDistance()
 
-        self.current_angle = 0.0
-        self.target_angle = 0.0
-        #self.turn_vel_fast = -0.5
-        #self.turn_vel_slow = -0.1
-        self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
+        self.current_angular_z = 0.0
+        self.current_linear_x = 0.0
 
-        self.target_color = None
-        self.color_ranges = {
-            "green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
-            "blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
-            "lightblue": (np.array([0, 82, 82]), np.array([25, 122, 122])),
-        }
+        self.target_colour = None
+        self.target_lower = -999
+        self.target_upper = 999
+        self.colour_ranges = [["green",(56,173,100),(64,255,255)]
+                              ["blue",(112,215,100),(124,255,255)]
+                              ["red1",(0,206,100),(4,255,255)]
+                              ["red2",(175,182,100),(180,255,255)]
+                              ["yellow",(25,63,100),(35,255,255)]
+                              ["purple",(143,56,100),(157,255,255)]
+                              ["turquoise",(83,79,100),(92,234,255)]]
         self.m00 = 0
-        self.m00_min = 1000
-        self.m00_max = 8000
-        self.hsv_img=None
-        self.lower = (115, 224, 100)
-        self.upper = (130, 255, 255)
-        self.cx=0
-        self.stop_flag = False
+        self.m00_min = 10000
+
+        self.min_distance = 0.2
+        self.max_distance = 0.6
 
         self.ctrl_c = False
-        self.rate = rospy.Rate(5)
+        self.rate = rospy.Rate(100)
+        self.start_time = rospy.get_rostime()
         rospy.on_shutdown(self.shutdown_ops)
 
     def shutdown_ops(self):
-        self.robot_controller.stop()
+        self.vel_controller.stop()
         cv2.destroyAllWindows()
         self.ctrl_c = True
 
     def camera_callback(self, img_data):
         try:
-            cv_img = self.cvbridge_interface.imgmsg_to_cv2(img_data, desired_encoding="bgr8")
+            cv_img = self.bridge.imgmsg_to_cv2(img_data, desired_encoding="bgr8")
         except CvBridgeError as e:
             print(e)
 
-        height, width, channels = cv_img.shape
+        height, width, _ = cv_img.shape
         crop_width = width - 800
         crop_height = 400
         crop_x = int((width / 2) - (crop_width / 2))
@@ -69,68 +68,56 @@ class ColourSearch(object):
         crop_img = cv_img[crop_y:crop_y + crop_height, crop_x:crop_x + crop_width]
         self.hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
 
-        # Identify target color
-        target_color_mask = cv2.inRange(self.hsv_img, self.lower, self.upper)
-        target_color_contours, channels = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        #target_color_contours, channels = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(target_color_contours) > 0:
-            # Draw contours on original image
-            cv2.drawContours(crop_img, target_color_contours, -1, (0, 255, 0), 2)
+        # if len(target_color_contours) > 0:
+        #     # Draw contours on original image
+        #     cv2.drawContours(crop_img, target_color_contours, -1, (0, 255, 0), 2)
 
-            # Get center of target color contours
-            target_color_m = cv2.moments(target_color_contours[0])
-            print("m00 :",target_color_m["m00"])
-            target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
-            target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
-            self.m00 = target_color_m["m00"]
-            self.cx=target_color_cx
-            if  target_color_cy>251 or self.m00 >self.m00_max:
-                center_x = crop_width / 2
-                diff_x = target_color_cx - center_x
-                # Calculate turn amount proportional to difference
-                self.turn_amount = diff_x / 100
-                # Set robot move command to turn
-                cv2.circle(crop_img, (target_color_cx, target_color_cy), 10, (0, 0, 255), 2)
-                print("turn_amount :", self.turn_amount)
-                # Print target color and position
-                print("Target color: {}, position: ({}, {})".format(self.target_color, target_color_cx, target_color_cy))
-        else:
-            self.turn_amount=0
-            # Calculate difference from center
+        #     # Get center of target color contours
+        #     target_color_m = cv2.moments(target_color_contours[0])
+        #     print("m00 :",target_color_m["m00"])
+        #     target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
+        #     target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
+        #     self.m00 = target_color_m["m00"]
+        #     self.cx = target_color_cx
+        #     if  target_color_cy > 251 or self.m00 > self.m00_max:
+        #         center_x = crop_width / 2
+        #         # Calculate turn amount proportional to difference
+        #         cv2.circle(crop_img, (target_color_cx, target_color_cy), 10, (0, 0, 255), 2)
+        #         # Print target color and position
+        #         print("Target color: {}, position: ({}, {})".format(self.target_color, target_color_cx, target_color_cy))
+        # else:
+        #     self.turn_amount=0
+        #     # Calculate difference from center
+
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
     def find_most_common_color(self):
-        colors = []
-        for color in self.color_ranges:
-            lower = self.color_ranges[color][0]
-            upper = self.color_ranges[color][1]
-            mask = cv2.inRange(self.hsv_img, lower, upper)
-            count = cv2.countNonZero(mask)
-            colors.append((count, color))
-        colors.sort(reverse=True)
-        color=colors[0][1]
-        self.lower = self.color_ranges[color][0]
-        self.upper = self.color_ranges[color][1]
-        return color
+        colours = []
+        for colour in self.colour_ranges:
+            colours.append([colour[0], cv2.countNonZero(cv2.inRange(self.hsv_img, colour[1], colour[2]))])
+        colours.sort(reverse=True)
+        colour = colours[0][1]
+        return colour, self.colour_ranges[colour][0], self.colour_ranges[colour][1]
 
     def main(self):
-        move_time=0.5
-        t_end = time.time() + 90
         while not self.ctrl_c:
             if self.hsv_img is None:
                 continue
             if self.target_color is None:
-                self.robot_controller.set_move_cmd(0.0, 0.6)
-                rospy.sleep(2)  # adjust time as needed
-                self.target_color = self.find_most_common_color()
-                print("TARGET DETECTED: Beaconing initiated ", self.target_color)
+                self.vel_controller.set_move_cmd(0.0, (math.pi/2))
+                self.vel_controller.publish()
+                rospy.sleep(2)
 
-                # turn back to original orientation
-                self.robot_controller.set_move_cmd(0.0,-0.6)
-                rospy.sleep(2)  # adjust time as needed
-            else:
-                pass
+                self.target_colour, self.target_lower, self.target_upper = self.find_most_common_color()
+                print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
+
+                self.vel_controller.set_move_cmd(0.0, (math.pi/2))
+                self.vel_controller.publish()
+                rospy.sleep(2)
+        
 
 if __name__ == '__main__':
     search_instance = ColourSearch()
