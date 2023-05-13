@@ -39,7 +39,7 @@ class Exploration():
         # Colour-related values
         self.m00 = 0
         self.m00_min = 10000
-        self.target_colour = rospy.get_param('/task5/target_colour')
+        self.target_colour = rospy.set_param('/task5/target_colour')
         rospy.loginfo(f"TASK 5 BEACON: The target is {self.target_colour}.")
 
     def shutdown_ops(self):

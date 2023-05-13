@@ -30,15 +30,16 @@ class ColourSearch(object):
         self.target_colour = None
         self.target_lower = -999
         self.target_upper = 999
-        self.colour_ranges = [["green",(56,173,100),(64,255,255)]
-                              ["blue",(112,215,100),(124,255,255)]
-                              ["red1",(0,206,100),(4,255,255)]
-                              ["red2",(175,182,100),(180,255,255)]
-                              ["yellow",(25,63,100),(35,255,255)]
-                              ["purple",(143,56,100),(157,255,255)]
-                              ["turquoise",(83,79,100),(92,234,255)]]
+        self.colour_ranges = [["green",(56,173,0),(64,255,255)],
+                              ["blue",(112,215,0),(124,255,255)],
+                              ["red1",(0,206,0),(4,255,255)],
+                              ["red2",(175,182,0),(180,255,255)],
+                              ["yellow",(25,63,0),(35,255,255)],
+                              ["purple",(143,56,0),(157,255,255)],
+                              ["turquoise",(83,79,0),(92,234,255)]]
         self.m00 = 0
         self.m00_min = 10000
+        self.hsv_img = None
 
         self.min_distance = 0.2
         self.max_distance = 0.6
@@ -97,26 +98,40 @@ class ColourSearch(object):
     def find_most_common_color(self):
         colours = []
         for colour in self.colour_ranges:
-            colours.append([colour[0], cv2.countNonZero(cv2.inRange(self.hsv_img, colour[1], colour[2]))])
-        colours.sort(reverse=True)
-        colour = colours[0][1]
-        return colour, self.colour_ranges[colour][0], self.colour_ranges[colour][1]
+            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+            m = cv2.moments(mask, binaryImage = True)
+            colours.append([colour[0], m['m00']])
+        colours.sort(key=lambda x:x[1], reverse=True)
+        colour = colours[0][0]
+        return colour
+
+    def find_target_colour(self):
+        for colour in self.colour_ranges:
+            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+            print (mask)
+            if mask.any():
+                self.target_colour = colour[0]
 
     def main(self):
         while not self.ctrl_c:
             if self.hsv_img is None:
                 continue
-            if self.target_color is None:
+            if self.target_colour is None:
                 self.vel_controller.set_move_cmd(0.0, (math.pi/2))
                 self.vel_controller.publish()
                 rospy.sleep(2)
 
-                self.target_colour, self.target_lower, self.target_upper = self.find_most_common_color()
+                self.vel_controller.set_move_cmd(0.0, 0.0)
+                self.vel_controller.publish()
+                rospy.sleep(1)
+                self.find_target_colour()
                 print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
-                self.vel_controller.set_move_cmd(0.0, (math.pi/2))
+                self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
                 self.vel_controller.publish()
                 rospy.sleep(2)
+
+                self.ctrl_c = True
         
 
 if __name__ == '__main__':
