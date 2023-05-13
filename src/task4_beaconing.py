@@ -30,13 +30,13 @@ class ColourSearch(object):
         self.target_colour = None
         self.target_lower = -999
         self.target_upper = 999
-        self.colour_ranges = [["green",(50,50,100),(72,255,255)],
-                              ["blue",(107,29,100),(124,255,255)],
-                              ["red1",(0,50,100),(8,255,255)],
-                              ["red2",(172,50,100),(180,255,255)],
-                              ["yellow",(22,22,100),(35,255,255)],
-                              ["purple",(141,45,100),(165,255,255)],
-                              ["turquoise",(79,50,100),(99,255,255)]]
+        self.colour_ranges = [["green",(37,50,100),(72,255,255)],
+                            ["blue",(105,50,100),(135,255,255)],
+                            ["red1",(0,50,100),(18,255,255)],
+                            ["red2",(170,50,100),(180,255,255)],
+                            ["yellow",(22,50,100),(35,255,255)],
+                            ["purple",(141,50,100),(165,255,255)],
+                            ["turquoise",(86,50,100),(94,255,255)]]
         self.m00 = 0
         self.m00_min = 10000
         self.hsv_img = None
@@ -69,41 +69,24 @@ class ColourSearch(object):
         crop_img = cv_img[crop_y:crop_y + crop_height, crop_x:crop_x + crop_width]
         self.hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
 
-        #target_color_contours, channels = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
-        # if len(target_color_contours) > 0:
-        #     # Draw contours on original image
-        #     cv2.drawContours(crop_img, target_color_contours, -1, (0, 255, 0), 2)
-
-        #     # Get center of target color contours
-        #     target_color_m = cv2.moments(target_color_contours[0])
-        #     print("m00 :",target_color_m["m00"])
-        #     target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
-        #     target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
-        #     self.m00 = target_color_m["m00"]
-        #     self.cx = target_color_cx
-        #     if  target_color_cy > 251 or self.m00 > self.m00_max:
-        #         center_x = crop_width / 2
-        #         # Calculate turn amount proportional to difference
-        #         cv2.circle(crop_img, (target_color_cx, target_color_cy), 10, (0, 0, 255), 2)
-        #         # Print target color and position
-        #         print("Target color: {}, position: ({}, {})".format(self.target_color, target_color_cx, target_color_cy))
-        # else:
-        #     self.turn_amount=0
-        #     # Calculate difference from center
+        for colour in self.colour_ranges:
+            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            # FIND LARGEST CONTOUR AREA (IF THERE IS ONE)
+            # COMPARE THIS AREA TO PREVIOUS MOST LARGE CONTOUR AREA
+            # ASSIGN COLOUR FOUND BASED ON THIS
+        
+        # IF CONTOUR FOUND AND TARGET COLOUR IS NOT NONE
+            # FIND MOMENTS
+            # IF DETECTED COLOUR = TARGET COLOUR
+                # LOG MESSAGE
+                # SET BOOLEAN THAT ALLOWS BYPASS OF OBSTACLE AVOIDANCE CODE
+                # SET VALUES THAT AID THE TURNING BASED ON MOMENTS
+            # ELSE
+                # it's all chill and stuff
 
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
-
-    def find_most_common_color(self):
-        colours = []
-        for colour in self.colour_ranges:
-            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
-            m = cv2.moments(mask, binaryImage = True)
-            colours.append([colour[0], m['m00']])
-        colours.sort(key=lambda x:x[1], reverse=True)
-        colour = colours[0][0]
-        return colour
 
     def find_target_colour(self):
         for colour in self.colour_ranges:
@@ -117,9 +100,9 @@ class ColourSearch(object):
             if self.hsv_img is None:
                 continue
             if self.target_colour is None:
-                self.vel_controller.set_move_cmd(0.0, (math.pi/2))
-                self.vel_controller.publish()
-                rospy.sleep(2)
+                #self.vel_controller.set_move_cmd(0.0, (math.pi/2))
+                #self.vel_controller.publish()
+                #rospy.sleep(2)
 
                 self.vel_controller.set_move_cmd(0.0, 0.0)
                 self.vel_controller.publish()
@@ -127,11 +110,16 @@ class ColourSearch(object):
                 self.find_target_colour()
                 print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
-                self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
-                self.vel_controller.publish()
-                rospy.sleep(2)
+                #self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
+                #self.vel_controller.publish()
+                #rospy.sleep(2)
 
                 self.ctrl_c = True
+
+            else:
+                pass
+                # OBJECT AVOIDANCE CODE FROM TASK 2
+                # IF TARGET COLOUR DETECTED THEN START APPROACHING
         
 
 if __name__ == '__main__':
