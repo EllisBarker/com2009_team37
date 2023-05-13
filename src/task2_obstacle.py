@@ -37,16 +37,18 @@ class ObstacleAvoidance():
                 self.vel_controller.publish()
                 self.turning = False
             else:
-                # DECIDE TURNING DIRECTION BASED ON ANGLE READINGS?
-                # (e.g. almost parallel to a wall means position of closest object is in the outer range and only needs a slight turn)
-
                 # Only move backwards once upon detecting an obstacle and pick a direction to turn
                 if self.turning == False:
                     self.vel_controller.set_move_cmd(linear=-1.3, angular=0.0)
                     self.vel_controller.publish()
                     rospy.sleep(0.5)
                     self.turning = True
-                    self.direction = random.choice([0,1])
+                    # If object detected on the left, turn right.
+                    if self.closest_object_location >= 0:
+                        self.direction = 0
+                    # If object detected on the right, turn left.
+                    else:
+                        self.direction = 1
                 # Start rotating for an amount of time between 0 and 1 seconds
                 self.vel_controller.set_move_cmd(linear=0.0, angular=[1.0,-1.0][self.direction])
                 self.vel_controller.publish()

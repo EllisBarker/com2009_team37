@@ -13,41 +13,29 @@ from sensor_msgs.msg import Image
 import numpy as np
 # Import some other modules from within this package
 from tb3 import Tb3Move
-from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
 
-class colour_search(object):
+class ColourSearch(object):
 
     def __init__(self):
         rospy.init_node('color_detect_node', anonymous=True)
         self.bridge = CvBridge()
+
+        self.robot_controller = Tb3Move()
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
-        self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        self.odo_sub = rospy.Subscriber('/odom', Odometry, self.odo_callback)
+        self.laser_sub = LaserDistance()
+
         self.current_angle = 0.0
         self.target_angle = 0.0
-        self.move_cmd = Twist()
-        self.turn_vel_fast = -0.5
-        self.turn_vel_slow = -0.1
+        #self.turn_vel_fast = -0.5
+        #self.turn_vel_slow = -0.1
+        self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
+
         self.target_color = None
-        self.stop_flag = False
-        self.sub = LaserDistance()
         self.color_ranges = {
             "green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
             "blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
             "lightblue": (np.array([0, 82, 82]), np.array([25, 122, 122])),
         }
-
-        self.cvbridge_interface = CvBridge()
-        self.robot_controller = Tb3Move()
-        self.turn_vel_fast = -0.5
-        self.turn_vel_slow = -0.1
-        self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
-        self.ctrl_c = False
-        rospy.on_shutdown(self.shutdown_ops)
-        self.min_distance = 0.2
-        self.max_distance = 0.6
-        self.rate = rospy.Rate(5)
         self.m00 = 0
         self.m00_min = 1000
         self.m00_max = 8000
@@ -55,15 +43,11 @@ class colour_search(object):
         self.lower = (115, 224, 100)
         self.upper = (130, 255, 255)
         self.cx=0
+        self.stop_flag = False
 
-    def odo_callback(self, odo_msg):
-        orientation = odo_msg.pose.pose.orientation
-        self.current_angle = math.atan2(2 * (orientation.w * orientation.z + orientation.x * orientation.y),
-                                   1 - 2 * (orientation.y ** 2 + orientation.z ** 2))
-
-    def calculate_angle_diff(self, angle1, angle2):
-        diff = angle1 - angle2
-        return diff + 2 * math.pi if diff < -math.pi else (diff - 2 * math.pi if diff > math.pi else diff)
+        self.ctrl_c = False
+        self.rate = rospy.Rate(5)
+        rospy.on_shutdown(self.shutdown_ops)
 
     def shutdown_ops(self):
         self.robot_controller.stop()
@@ -76,7 +60,7 @@ class colour_search(object):
         except CvBridgeError as e:
             print(e)
 
-        height, width, _ = cv_img.shape
+        height, width, channels = cv_img.shape
         crop_width = width - 800
         crop_height = 400
         crop_x = int((width / 2) - (crop_width / 2))
@@ -87,7 +71,7 @@ class colour_search(object):
 
         # Identify target color
         target_color_mask = cv2.inRange(self.hsv_img, self.lower, self.upper)
-        target_color_contours, _ = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        target_color_contours, channels = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         if len(target_color_contours) > 0:
             # Draw contours on original image
@@ -100,8 +84,7 @@ class colour_search(object):
             target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
             self.m00 = target_color_m["m00"]
             self.cx=target_color_cx
-            if  target_color_cy>251 or  self.m00 >self.m00_max:
-
+            if  target_color_cy>251 or self.m00 >self.m00_max:
                 center_x = crop_width / 2
                 diff_x = target_color_cx - center_x
                 # Calculate turn amount proportional to difference
@@ -111,7 +94,6 @@ class colour_search(object):
                 print("turn_amount :", self.turn_amount)
                 # Print target color and position
                 print("Target color: {}, position: ({}, {})".format(self.target_color, target_color_cx, target_color_cy))
-
         else:
             self.turn_amount=0
             # Calculate difference from center
@@ -139,96 +121,19 @@ class colour_search(object):
             if self.hsv_img is None:
                 continue
             if self.target_color is None:
-                self.move_to_cmd(True, True, 2, linear_vel=0)
+                self.robot_controller.set_move_cmd(0.0, 0.6)
+                rospy.sleep(2)  # adjust time as needed
                 self.target_color = self.find_most_common_color()
                 print("TARGET DETECTED: Beaconing initiated ", self.target_color)
-                rospy.sleep(2)  # adjust time as needed
+
                 # turn back to original orientation
-                self.move_to_cmd(True, False, 2, linear_vel=0)
-
+                self.robot_controller.set_move_cmd(0.0,-0.6)
                 rospy.sleep(2)  # adjust time as needed
-                self.move_to_cmd(True, True, 0.3, angular_vel=0)
-
             else:
-                # Check for obstacles in front
-                # If the robot is too close to an obstacle in front, it needs to avoid it
-                # Move the robot
-                self.move_to_cmd(True, True, 0.2, angular_vel=0)
-                # Check for obstacles in front
-                # If the robot is too close to an obstacle in front, it needs to avoid it
-                if self.turn_amount!=0:
-                    if self.cx >= 560-80 and self.cx <= 560+80:
-                        self.move_to_cmd(True, True, 0.2, angular_vel=0)
-                        if self.sub.min_front_distance< self.min_distance:
-                            self.robot_controller.set_move_cmd(0.0, 0.0)
-                            print("BEACONING COMPLETE: The robot has now stopped.")
-                            self.ctrl_c = True
-                    elif self.turn_amount<-0.3:
-                        if abs(self.turn_amount)>2:
-                            turn_time=abs(self.turn_amount)/13
-                        else:
-                            turn_time = 0.2
-                        self.move_to_cmd(True, True, turn_time, linear_vel=0)
-                    elif self.turn_amount> -0.3:
-                        if abs(self.turn_amount) > 2:
-                            turn_time = abs(self.turn_amount) / 13
-                        else:
-                            turn_time = 0.2
-                        self.move_to_cmd(True, False, turn_time, linear_vel=0)
-                    elif self.sub.min_front_distance< self.min_distance:
-                        self.robot_controller.set_move_cmd(0.0, 0.0)
-                        print("BEACONING COMPLETE: The robot has now stopped.")
-                        self.ctrl_c = True
-                    else:
-                        self.move_to_cmd(True, True, 0.1, angular_vel=0)
-                elif self.sub.min_front_distance <= self.min_distance:
-                    # Move backwards
-                    self.move_to_cmd(False, True, 0.7, angular_vel=0)
-                    # If the distance on the right side is also close, adjust to the left
-                    if self.sub.min_left_distance >= self.sub.min_right_distance:
-                        self.move_to_cmd(True, True, move_time, linear_vel=0)
-                    # If the distance on the left side is also close, adjust to the right and turn right
-                    elif self.sub.min_left_distance <= self.sub.min_right_distance:
-                        self.move_to_cmd(True, False, move_time, linear_vel=0)
-                elif self.sub.min_front_distance <= self.max_distance:
-                    if self.sub.min_left_distance >= self.sub.min_right_distance :
-                        self.move_to_cmd(True, True, move_time, linear_vel=0)
-                    # If the distance on the left side is also close, adjust to the right and turn right
-                    elif self.sub.min_left_distance <= self.sub.min_right_distance :
-                        self.move_to_cmd(True, False, move_time, linear_vel=0)
-                else:
-                    if self.min_distance>0.8:
-                        self.move_to_cmd(True, True, 0.4, linear_vel=0.7, angular_vel=0)
-                    else:
-                        self.move_to_cmd(True, True, 0.1, angular_vel=0)
-
-
-            if time.time() >= t_end:
-                print("Time is up")
-                self.ctrl_c = True
-
-
-    def move_to_cmd(self, forward, left_or_right, cost_time, linear_val=0.2, angular_val=0.6):
-        vel = Twist()
-        t_end = time.time() + cost_time
-        if forward:
-            vel.linear.x = linear_val
-            if left_or_right:
-                vel.angular.z = angular_val
-            else:
-                vel.angular.z = -angular_val
-        else:
-            vel.linear.x = -linear_val
-            if left_or_right:
-                vel.angular.z = -angular_val
-            else:
-                vel.angular.z = angular_val
-
-        while time.time() < t_end:
-            self.pub.publish(vel)
+                pass
 
 if __name__ == '__main__':
-    search_instance = colour_search()
+    search_instance = ColourSearch()
     try:
         search_instance.main()
     except rospy.ROSInterruptException:

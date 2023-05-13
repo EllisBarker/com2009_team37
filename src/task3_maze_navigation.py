@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import rospy
 from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
-import waffle
 from math import sqrt
 
 class MazeNavigation():
