@@ -35,7 +35,6 @@ class ColourSearch(object):
                               ["purple",(143,153,100),(157,255,255)],
                               ["turquoise",(84,150,100),(96,255,255)]]
         self.m00_min = 10000
-        self.hsv_img = None
 
         self.approach_phase = False
         self.min_distance = 0.2
@@ -63,19 +62,20 @@ class ColourSearch(object):
         crop_x = int((width / 2) - (crop_width / 2))
         crop_y = int((height / 2) - (crop_height / 2))
 
-        crop_img = cv_img[crop_y:crop_y + crop_height, crop_x:crop_x + crop_width]
-        self.hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
+        crop_img = cv_img[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width]
+        hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2HSV)
 
         detected_colour = None
         detected_colour_contour = None
         detected_colour_contour_area = 0
         # Create masks and contours for each colour available to obtain the contour of the greatest area
         for colour in self.colour_ranges:
-            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+            mask = cv2.inRange(hsv_img, colour[1], colour[2])
             if colour[0] == "red1":
-                mask = mask + cv2.inRange(self.hsv_img, self.colour_ranges[3][1], self.colour_ranges[3][2])
+                mask = mask + cv2.inRange(hsv_img, self.colour_ranges[3][1], self.colour_ranges[3][2])
             if colour[0] == "red2":
-                mask = mask + cv2.inRange(self.hsv_img, self.colour_ranges[2][1], self.colour_ranges[2][2])
+                mask = mask + cv2.inRange(hsv_img, self.colour_ranges[2][1], self.colour_ranges[2][2])
+            print (mask)
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             if len(contours) != 0:
                 for contour in contours:
@@ -108,17 +108,15 @@ class ColourSearch(object):
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
-    def find_target_colour(self):
-        for colour in self.colour_ranges:
-            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
-            print (mask)
-            if mask.any():
-                self.target_colour = colour[0]
+    #def find_target_colour(self):
+    #    for colour in self.colour_ranges:
+    #        mask = cv2.inRange(hsv_img, colour[1], colour[2])
+    #        print (mask)
+    #        if mask.any():
+    #            self.target_colour = colour[0]
 
     def main(self):
         while not self.ctrl_c:
-            if self.hsv_img is None:
-                continue
             if self.target_colour is None:
                 self.vel_controller.set_move_cmd(0.26, 0.0)
                 self.vel_controller.publish()
@@ -131,7 +129,7 @@ class ColourSearch(object):
                 self.vel_controller.set_move_cmd(0.0, 0.0)
                 self.vel_controller.publish()
                 rospy.sleep(1)
-                self.find_target_colour()
+                #self.find_target_colour()
                 self.find_target_colour_phase = False
                 
 
