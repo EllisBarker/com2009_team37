@@ -30,13 +30,13 @@ class ColourSearch(object):
         self.target_colour = None
         self.target_lower = -999
         self.target_upper = 999
-        self.colour_ranges = [["green",(37,50,100),(72,255,255)],
-                            ["blue",(105,50,100),(135,255,255)],
-                            ["red1",(0,50,100),(18,255,255)],
-                            ["red2",(170,50,100),(180,255,255)],
-                            ["yellow",(22,50,100),(35,255,255)],
-                            ["purple",(141,50,100),(165,255,255)],
-                            ["turquoise",(86,50,100),(94,255,255)]]
+        self.colour_ranges = [["green",(35,90,100),(79,255,255)],
+                              ["blue",(100,90,100),(140,255,255)],
+                              ["red1",(0,90,100),(22,255,255)],
+                              ["red2",(165,90,100),(180,255,255)],
+                              ["yellow",(22,90,100),(35,255,255)],
+                              ["purple",(140,90,100),(165,255,255)],
+                              ["turquoise",(79,90,100),(100,255,255)]]
         self.m00 = 0
         self.m00_min = 10000
         self.hsv_img = None
@@ -69,12 +69,18 @@ class ColourSearch(object):
         crop_img = cv_img[crop_y:crop_y + crop_height, crop_x:crop_x + crop_width]
         self.hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2RGB)
 
+        detected_colour = None
+        detected_colour_contour = None
+        detected_colour_contour_area = 0
         for colour in self.colour_ranges:
             mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            # FIND LARGEST CONTOUR AREA (IF THERE IS ONE)
-            # COMPARE THIS AREA TO PREVIOUS MOST LARGE CONTOUR AREA
-            # ASSIGN COLOUR FOUND BASED ON THIS
+            if len(contours) != 0:
+                for contour in contours:
+                    if cv2.contourArea(contour) > detected_colour_contour_area:
+                        detected_colour_contour = contour
+                        detected_colour_contour_area = cv2.contourArea(contour)
+                        detected_colour = colour[0]
         
         # IF CONTOUR FOUND AND TARGET COLOUR IS NOT NONE
             # FIND MOMENTS
@@ -88,12 +94,18 @@ class ColourSearch(object):
         cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
-    def find_target_colour(self):
-        for colour in self.colour_ranges:
-            mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
-            print (mask)
-            if mask.any():
-                self.target_colour = colour[0]
+    #def find_target_colour(self):
+    #    max_m = 0
+    #    for colour in self.colour_ranges:
+    #        mask = cv2.inRange(self.hsv_img, colour[1], colour[2])
+    #        m = cv2.moments(mask, binaryImage = True)
+    #        print (mask)
+    #        print (colour[0])
+    #        if max_m < m['m00']:
+    #            self.target_colour = colour[0]
+    #            print (colour[0])
+    #            print (self.target_colour)
+    #            max_m = m['m00']
 
     def main(self):
         while not self.ctrl_c:
@@ -107,7 +119,7 @@ class ColourSearch(object):
                 self.vel_controller.set_move_cmd(0.0, 0.0)
                 self.vel_controller.publish()
                 rospy.sleep(1)
-                self.find_target_colour()
+                #self.find_target_colour()
                 print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
 
                 #self.vel_controller.set_move_cmd(0.0, -(math.pi/2))
