@@ -22,24 +22,37 @@ class Exploration():
             Image, self.camera_callback)
         self.cvbridge_interface = CvBridge()
 
-        # Map-related functionality
+        # File-saving functionality
         self.map_path = "com2009_team37/maps/task5_map"
+        self.base_image_path = "com2009_team37/snaps/"
+        self.base_image_path.mkdir(parents=True, exist_ok=True) 
 
         # Movement and sensor controllers
         self.robot_controller = Tb3Move()
         self.tb3_odom = Tb3Odometry()
         self.tb3_lidar = Tb3LaserScan()
+        
+        # Colour-related values
+        self.m00 = 0
+        self.m00_min = 10000
+        self.target_colour = rospy.set_param('/task5/target_colour')
+        # RANGES SUBJECT TO CHANGE???????
+        self.colour_ranges = [["green",(40,150,100),(65,255,255)],
+                              ["blue",(115,225,100),(130,255,255)],
+                              ["red1",(0,188,100),(4,255,255)],
+                              ["red2",(175,200,100),(180,255,255)],
+                              ["yellow",(25,120,100),(35,255,255)],
+                              ["purple",(143,153,100),(157,255,255)],
+                              ["turquoise",(84,150,100),(96,255,255)]]
+        self.picture_taken = False
+        self.picture_signal = False
 
         # Shutdown-related operations
         self.ctrl_c = False
         rospy.on_shutdown(self.shutdown_ops)
 
         self.rate = rospy.Rate(100)
-        
-        # Colour-related values
-        self.m00 = 0
-        self.m00_min = 10000
-        self.target_colour = rospy.set_param('/task5/target_colour')
+
         rospy.loginfo(f"TASK 5 BEACON: The target is {self.target_colour}.")
 
     def shutdown_ops(self):
@@ -47,7 +60,7 @@ class Exploration():
         cv2.destroyAllWindows()
         self.ctrl_c = True
 
-    def save_image(self):
+    def save_map(self):
         rospy.init_node("map_getter", anonymous=True)
         launch = roslaunch.scriptapi.ROSLaunch()
         launch.start()
@@ -56,18 +69,60 @@ class Exploration():
                                    node_type="map_saver",
                                    args=f"-f {self.map_path}")
         process = launch.launch(node)
+    
+    def save_picture(self, img):
+        full_image_path = self.base_image_path.joinpath("the_beacon.jpg") 
+        print("Opening the image in a new window...")
+        cv2.imshow("the_beacon", img) 
+        print(f"Saving the image to '{full_image_path}'...")
+        cv2.imwrite(str(full_image_path), img) 
+        print(f"Saved an image to '{full_image_path}'\n"
+            f"image dims = {img.shape[0]}x{img.shape[1]}px\n"
+            f"file size = {full_image_path.stat().st_size} bytes") 
+        print("Please close down the image pop-up window to continue...")
+        cv2.waitKey(0) 
 
     def camera_callback(self, img_data):
         try:
             cv_img = self.cvbridge_interface.imgmsg_to_cv2(img_data, desired_encoding="bgr8")
         except CvBridgeError as e:
             print(e)
-        # PICK RANGE BASED ON INLINE ARGUMENT FOR COLOUR
+
+        if self.picture_signal == True:
+            self.save_picture(cv_img)
+            self.picture_signal = False
+            self.picture_taken = True
+
+        height, width, _ = cv_img.shape
+        crop_width = width - 800
+        crop_height = 400
+        crop_x = int((width/2) - (crop_width/2))
+        crop_y = int((height/2) - (crop_height/2))
+
+        crop_img = cv_img[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width]
+        hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2HSV)
+
+        mask = cv2.inRange(hsv_img, self.colour_ranges[self.target_colour][1], self.colour_ranges[self.target_colour][2])
+        if mask.any():
+            m = cv2.moments(mask)
+            self.m00 = m['m00']
+            self.cy = m['m10'] / (m['m00'] + 1e-5)
+            if self.m00 > self.m00_min:
+                cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
 
     def main(self):
         while not self.ctrl_c:
-            self.save_image()
-            # IF DESIRED OBJECT DETECTED, TURN AND TRY TO APPROACH DETECTED
+            if self.picture_taken == False:
+                if self.m00 > self.m00_min:
+                    self.robot_controller.set_move_cmd(0.0,0.0)
+                    self.robot_controller.publish()
+                    # TURNING, ONLY SAVE IF BEACON IS STRAIGHT FORWARD
+                    self.picture_signal = True
+
+            # REGULAR OBJECT AVOIDANCE
+
+            # RUN THIS WHEN THE CODE IS DONE
+            self.save_map()
 
 if __name__ == '__main__':
     exploration_instance = Exploration()
