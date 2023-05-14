@@ -28,10 +28,10 @@ class Exploration():
                               ["yellow",(25,120,100),(35,255,255)]]
                               #["purple",(143,153,100),(157,255,255)],
                               #["turquoise",(84,150,100),(96,255,255)]]
-        #self.target_colour = self.colour_ranges[self.colour_ranges.index(rospy.set_param('/task5/target_colour'))]
         for colour in self.colour_ranges:
-            if "blue" in colour:
+            if rospy.get_param('task5/target_colour') in colour:
                 self.target_colour = colour
+        print (self.target_colour)
         self.picture_taken = False
         self.picture_signal = False
         self.turn_vel_fast = -0.5
