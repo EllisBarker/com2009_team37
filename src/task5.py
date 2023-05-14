@@ -39,6 +39,7 @@ class Exploration():
         self.move_rate = ""
 
         self.rate = rospy.Rate(100)
+        self.start_time = rospy.get_rostime()
 
         # Camera-related functionality
         # "/camera/rgb/image_raw" for simulation
@@ -69,7 +70,6 @@ class Exploration():
         self.ctrl_c = True
 
     def save_map(self):
-        rospy.init_node("map_getter", anonymous=True)
         launch = roslaunch.scriptapi.ROSLaunch()
         launch.start()
         print(f"Saving map at time: {rospy.get_time()}...")
