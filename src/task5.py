@@ -6,7 +6,8 @@ import rospy, roslaunch
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
-from pathlib import Path 
+from pathlib import Path
+import argparse
 
 # Movement and sensor modules
 from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
@@ -28,10 +29,12 @@ class Exploration():
                               ["yellow",(25,120,100),(35,255,255)]]
                               #["purple",(143,153,100),(157,255,255)],
                               #["turquoise",(84,150,100),(96,255,255)]]
+        cli = argparse.ArgumentParser()
+        cli.add_argument("-target_colour", metavar = "COL", default="blue")
+        colour_name = cli.parse_args(rospy.myargv()[1:]).target_colour
         for colour in self.colour_ranges:
-            if rospy.get_param('task5/target_colour') in colour:
+            if colour_name in colour:
                 self.target_colour = colour
-        print (self.target_colour)
         self.picture_taken = False
         self.picture_signal = False
         self.turn_vel_fast = -0.5
