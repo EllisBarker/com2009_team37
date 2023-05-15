@@ -21,14 +21,11 @@ class Exploration():
         self.m00 = 0
         self.m00_min = 10000
         self.target_colour = ""
-        # RANGES SUBJECT TO CHANGE???????
         self.colour_ranges = [["green",(40,150,100),(65,255,255)],
                               ["blue",(115,225,100),(130,255,255)],
                               ["red1",(0,188,100),(4,255,255)],
                               ["red2",(175,200,100),(180,255,255)],
                               ["yellow",(25,120,100),(35,255,255)]]
-                              #["purple",(143,153,100),(157,255,255)],
-                              #["turquoise",(84,150,100),(96,255,255)]]
         cli = argparse.ArgumentParser()
         cli.add_argument("-target_colour", metavar = "COL", default="blue")
         colour_name = cli.parse_args(rospy.myargv()[1:]).target_colour
@@ -51,11 +48,6 @@ class Exploration():
             Image, self.camera_callback)
         self.cvbridge_interface = CvBridge()
 
-        # File-saving functionality
-        self.map_path = "com2009_team37/maps/task5_map"
-        #self.base_image_path = Path.joinpath("com2009_team37/snaps/")
-        #self.base_image_path.mkdir(parents=True, exist_ok=True) 
-
         # Movement and sensor controllers
         self.robot_controller = Tb3Move()
         self.tb3_odom = Tb3Odometry()
@@ -73,15 +65,10 @@ class Exploration():
         self.ctrl_c = True
     
     def save_picture(self, img):
-        full_image_path = self.base_image_path.joinpath("the_beacon.jpg") 
-        print("Opening the image in a new window...")
-        cv2.imshow("the_beacon", img) 
+        full_image_path = Path.home().joinpath("catkin_ws/src/com2009_team37/snaps/the_beacon.jpg")
+        full_image_path.mkdir(parents=True, exist_ok=True)
         print(f"Saving the image to '{full_image_path}'...")
         cv2.imwrite(str(full_image_path), img) 
-        print(f"Saved an image to '{full_image_path}'\n"
-            f"image dims = {img.shape[0]}x{img.shape[1]}px\n"
-            f"file size = {full_image_path.stat().st_size} bytes") 
-        print("Please close down the image pop-up window to continue...")
         cv2.waitKey(0) 
 
     def camera_callback(self, img_data):
@@ -91,7 +78,7 @@ class Exploration():
             print(e)
 
         if self.picture_signal == True:
-            #self.save_picture(cv_img)
+            self.save_picture(cv_img)
             self.picture_signal = False
             self.picture_taken = True
 
