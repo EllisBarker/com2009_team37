@@ -71,15 +71,6 @@ class Exploration():
         self.robot_controller.stop()
         cv2.destroyAllWindows()
         self.ctrl_c = True
-
-    def save_map(self):
-        launch = roslaunch.scriptapi.ROSLaunch()
-        launch.start()
-        print(f"Saving map at time: {rospy.get_time()}...")
-        node = roslaunch.core.Node(package="map_server",
-                                   node_type="map_saver",
-                                   args=f"-f {self.map_path}")
-        process = launch.launch(node)
     
     def save_picture(self, img):
         full_image_path = self.base_image_path.joinpath("the_beacon.jpg") 
@@ -151,9 +142,6 @@ class Exploration():
             else:
                 pass
                 # REGULAR OBJECT AVOIDANCE
-
-            # RUN THIS AT A REGULAR INTERVAL
-            #self.save_map()
 
 if __name__ == '__main__':
     exploration_instance = Exploration()
