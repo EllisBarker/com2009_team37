@@ -79,7 +79,6 @@ class Exploration():
         except CvBridgeError as e:
             print(e)
 
-        
         if self.picture_signal == True:
             self.save_picture(cv_img, img_name = "the_beacon")
             self.picture_signal = False
