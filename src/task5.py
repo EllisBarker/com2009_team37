@@ -23,8 +23,8 @@ class Exploration():
         self.target_colour = ""
         self.colour_ranges = [["green",(40,150,100),(65,255,255)],
                               ["blue",(115,225,100),(130,255,255)],
-                              ["red1",(0,188,100),(4,255,255)],
-                              ["red2",(175,200,100),(180,255,255)],
+                              ["red",(0,188,100),(4,255,255)],
+                              #["red2",(175,200,100),(180,255,255)],
                               ["yellow",(25,120,100),(35,255,255)]]
         cli = argparse.ArgumentParser()
         cli.add_argument("-target_colour", metavar = "COL", default="blue")
@@ -34,8 +34,9 @@ class Exploration():
                 self.target_colour = colour
         self.picture_taken = False
         self.picture_signal = False
-        self.turn_vel_fast = -0.5
-        self.turn_vel_slow = -0.1
+        # Turn velocity values (positive is left, negative is right)
+        self.turn_vel_fast = 0.9
+        self.turn_vel_slow = 0.3
         self.move_rate = ""
 
         self.rate = rospy.Rate(100)
@@ -64,9 +65,10 @@ class Exploration():
         cv2.destroyAllWindows()
         self.ctrl_c = True
     
-    def save_picture(self, img):
-        full_image_path = Path.home().joinpath("catkin_ws/src/com2009_team37/snaps/the_beacon.jpg")
+    def save_picture(self, img, img_name):
+        full_image_path = Path.home().joinpath("catkin_ws/src/com2009_team37/snaps")
         full_image_path.mkdir(parents=True, exist_ok=True)
+        full_image_path = full_image_path.joinpath(f"{img_name}.jpg") 
         print(f"Saving the image to '{full_image_path}'...")
         cv2.imwrite(str(full_image_path), img) 
         cv2.waitKey(0) 
@@ -77,8 +79,9 @@ class Exploration():
         except CvBridgeError as e:
             print(e)
 
+        
         if self.picture_signal == True:
-            self.save_picture(cv_img)
+            self.save_picture(cv_img, img_name = "the_beacon")
             self.picture_signal = False
             self.picture_taken = True
 
@@ -101,11 +104,14 @@ class Exploration():
 
     def main(self):
         while not self.ctrl_c:
+            pass
             # Blob detected and picture has not yet been taken
+            print (self.m00)
             if self.picture_taken == False and self.m00 > self.m00_min:
                 self.robot_controller.set_move_cmd(0.0,0.0)
                 self.robot_controller.publish()
 
+                # CHANGE TO DETERMINE TURN DIRECTION BASED ON THE HALF OF THE RANGE THAT THE BLOB IS IN
                 # Turning to face the beacon straight ahead and take a picture
                 if self.cy >= 560-100 and self.cy <= 560+100:
                     if self.move_rate == 'slow':
@@ -116,8 +122,8 @@ class Exploration():
                 if self.move_rate == 'slow':
                     print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
                     self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
-                elif self.move_rate == 'stop' and self.stop_counter > 0:
-                    print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels... Counting down: {self.stop_counter}")
+                elif self.move_rate == 'stop':
+                    print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels...")
                     self.robot_controller.set_move_cmd(0.0, 0.0)
                     self.picture_signal = True
                 else:
