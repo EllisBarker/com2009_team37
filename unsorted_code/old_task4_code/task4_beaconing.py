@@ -35,6 +35,7 @@ class colour_search(object):
         self.color_ranges = {
             "green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
             "blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
+            "yellow": (np.array([180, 180, 0]), np.array([255, 255, 20])),
             "lightblue": (np.array([0, 82, 82]), np.array([25, 122, 122])),
         }
 
