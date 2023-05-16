@@ -34,12 +34,11 @@ class Exploration():
                 self.target_colour = colour
         self.picture_taken = False
         self.picture_signal = False
-        # Turn velocity values (positive is left, negative is right)
-        self.turn_vel_fast = 0.9
-        self.turn_vel_slow = 0.3
+        # Turn velocity value (positive is left, negative is right)
+        self.turn_vel = 0.3
         self.move_rate = ""
 
-        self.rate = rospy.Rate(100)
+        self.rate = rospy.Rate(10)
         self.start_time = rospy.get_rostime()
 
         # Camera-related functionality
@@ -103,36 +102,44 @@ class Exploration():
 
     def main(self):
         while not self.ctrl_c:
-            pass
             # Blob detected and picture has not yet been taken
-            print (self.m00)
             if self.picture_taken == False and self.m00 > self.m00_min:
                 self.robot_controller.set_move_cmd(0.0,0.0)
                 self.robot_controller.publish()
 
-                # CHANGE TO DETERMINE TURN DIRECTION BASED ON THE HALF OF THE RANGE THAT THE BLOB IS IN
-                # Turning to face the beacon straight ahead and take a picture
+                print (self.m00)
+                # Setting speed to turn at depending on blob position
                 if self.cy >= 560-100 and self.cy <= 560+100:
                     if self.move_rate == 'slow':
                         self.move_rate = 'stop'
                 else:
                     self.move_rate = 'slow'
                 
+                # Publish turn commands to turn robot with turn directions dependent on the position of the blob
                 if self.move_rate == 'slow':
                     print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-                    self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
+                    if self.cy < 560:
+                        self.robot_controller.set_move_cmd(0.0, self.turn_vel)
+                    elif self.cy > 560:
+                        self.robot_controller.set_move_cmd(0.0, -(self.turn_vel))
+                # Stop turning once blob of colour is directly ahead
                 elif self.move_rate == 'stop':
                     print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels...")
                     self.robot_controller.set_move_cmd(0.0, 0.0)
                     self.picture_signal = True
                 else:
                     print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-                    self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
+                    if self.cy < 560:
+                        self.robot_controller.set_move_cmd(0.0, self.turn_vel)
+                    elif self.cy > 560:
+                        self.robot_controller.set_move_cmd(0.0, -(self.turn_vel))
 
                 self.robot_controller.publish()
+                rospy.sleep(0.5)
 
             else:
-                pass
+                print ("NOT TURNING ANYMORE")
+                rospy.sleep(0.5)
                 # REGULAR OBJECT AVOIDANCE
 
 if __name__ == '__main__':
