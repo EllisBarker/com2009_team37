@@ -69,14 +69,14 @@ class Tb3LaserScan(object):
             valid_data = range[range>0.1]
             return valid_data.mean() if np.shape(valid_data)[0] > 0 else np.nan
         
-        left_arc = scan_data.ranges[0:31]
-        right_arc = scan_data.ranges[-30:]
+        left_arc = scan_data.ranges[0:22]
+        right_arc = scan_data.ranges[-23:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
         valid = front_arc[front_arc>0.1]
         self.distance.front = valid.mean() if np.shape(valid)[0] > 0 else np.nan
         
         self.min_distance = front_arc.min()
-        arc_angles = np.arange(-30, 31)
+        arc_angles = np.arange(-22, 23)
         self.closest_object_position = arc_angles[np.argmin(front_arc)]
 
         # right subsets:
