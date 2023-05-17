@@ -11,8 +11,6 @@ start_time = rospy.get_rostime()
 
 launch = roslaunch.scriptapi.ROSLaunch()
 launch.start()
-for a in range(99):
-    print ("YEAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
 
 while not rospy.is_shutdown():
     print(f"Saving map at time: {rospy.get_time()}...")

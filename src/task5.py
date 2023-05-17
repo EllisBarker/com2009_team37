@@ -20,7 +20,7 @@ class Exploration():
         
         # Colour and beaconing-related values
         self.m00 = 0
-        self.m00_min = 20000
+        self.m00_min = 40000
         self.target_colour = ""
         self.colour_ranges = [["green",(40,150,100),(65,255,255)],
                               ["blue",(115,225,100),(130,255,255)],
@@ -35,20 +35,20 @@ class Exploration():
                 self.target_colour = colour
         self.picture_taken = False
         self.picture_signal = False
-        self.found_time = 0
+        self.beacon_found = False
+        self.beacon_found_time = 0
         # Turn velocity value (positive is left, negative is right)
         self.turn_vel = 0.6
         self.move_rate = ""
 
         # Maximum allowed velocities
-        self.max_lin_vel = 0.2
-        self.max_ang_vel = 0.6
+        self.max_lin_vel = 0.2 # 0.2
+        self.max_ang_vel = 0.6 # 0.6
 
         self.rate = rospy.Rate(10)
         self.start_time = rospy.get_rostime()
 
         # Camera-related functionality
-        # "/camera/rgb/image_raw" for simulation
         self.camera_topic = "/camera/rgb/image_raw"
         self.camera_subscriber = rospy.Subscriber(self.camera_topic,
             Image, self.camera_callback)
@@ -103,7 +103,6 @@ class Exploration():
             m = cv2.moments(mask)
             self.m00 = m['m00']
             self.cy = m['m10'] / (m['m00'] + 1e-5)
-            print (f"THIS IS CY {self.cy}")
             if self.m00 > self.m00_min:
                 cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
 
@@ -111,37 +110,46 @@ class Exploration():
         while not self.ctrl_c:
             # Blob detected and picture has not yet been taken
             if self.picture_taken == False and self.m00 > self.m00_min:
-                self.vel_controller.set_move_cmd(0.0,0.0)
-                self.vel_controller.publish()
+                if self.beacon_found == False:
+                    self.beacon_found_time = rospy.get_rostime()
+                    self.beacon_found = True
+                if self.beacon_found == True and (rospy.get_rostime().secs - self.beacon_found_time.secs) < 5:
+                    self.vel_controller.set_move_cmd(0.0,0.0)
+                    self.vel_controller.publish()
 
-                # Setting speed to turn at depending on blob position
-                if self.cy >= 560-100 and self.cy <= 560+100:
+                    # Setting speed to turn at depending on blob position
+                    if self.cy >= 560-100 and self.cy <= 560+100:
+                        if self.move_rate == 'slow':
+                            self.move_rate = 'stop'
+                    else:
+                        self.move_rate = 'slow'
+                    
+                    # Publish turn commands to turn robot with turn directions dependent on the position of the blob
                     if self.move_rate == 'slow':
-                        self.move_rate = 'stop'
-                else:
-                    self.move_rate = 'slow'
-                
-                # Publish turn commands to turn robot with turn directions dependent on the position of the blob
-                if self.move_rate == 'slow':
-                    print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-                    if self.cy < 560:
-                        self.vel_controller.set_move_cmd(0.0, self.turn_vel)
-                    elif self.cy > 560:
-                        self.vel_controller.set_move_cmd(0.0, -(self.turn_vel))
-                # Stop turning once blob of colour is directly ahead
-                elif self.move_rate == 'stop':
-                    print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels...")
-                    self.vel_controller.set_move_cmd(0.0, 0.0)
-                    self.picture_signal = True
-                else:
-                    print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-                    if self.cy < 560:
-                        self.vel_controller.set_move_cmd(0.0, self.turn_vel)
-                    elif self.cy > 560:
-                        self.vel_controller.set_move_cmd(0.0, -(self.turn_vel))
+                        print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
+                        if self.cy < 560:
+                            self.vel_controller.set_move_cmd(0.0, self.turn_vel)
+                        elif self.cy > 560:
+                            self.vel_controller.set_move_cmd(0.0, -(self.turn_vel))
+                    # Stop turning once blob of colour is directly ahead
+                    elif self.move_rate == 'stop':
+                        print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels...")
+                        self.vel_controller.set_move_cmd(0.0, 0.0)
+                        self.picture_signal = True
+                    else:
+                        print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
+                        if self.cy < 560:
+                            self.vel_controller.set_move_cmd(0.0, self.turn_vel)
+                        elif self.cy > 560:
+                            self.vel_controller.set_move_cmd(0.0, -(self.turn_vel))
 
-                self.vel_controller.publish()
-                rospy.sleep(0.5)
+                    self.vel_controller.publish()
+                    rospy.sleep(0.5)
+                elif rospy.get_rostime().secs >= 5:
+                    self.beacon_found = False
+                    for a in range(90):
+                        print ("YEAHHHHHHH")
+                    rospy.sleep(0.5)
 
             else:
                 left_wall_rate  = self.tb3_lidar.distance.l3 - self.tb3_lidar.distance.l4
@@ -167,6 +175,11 @@ class Exploration():
 
                     # if there is a dead end
                     else:
+                        #print ("THIS IS HAPPENING")
+                        #print ("YEAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
+                        #self.vel_controller.set_move_cmd(linear=-0.1, angular=0)
+                        #self.vel_controller.publish()
+                        #rospy.sleep(0.5)
                         self.vel_controller.set_move_cmd(linear=lin_speed , angular=-self.max_ang_vel)
 
                 else: # if no obstacles infront
@@ -198,7 +211,7 @@ class Exploration():
                 print(f"{right_wall_rate=:.3f}")
                 print(f"{left_wall_rate=:.3f}")
                 self.vel_controller.publish()
-                rospy.sleep(0.25)
+                rospy.sleep(0.4)
 
 if __name__ == '__main__':
     exploration_instance = Exploration()
