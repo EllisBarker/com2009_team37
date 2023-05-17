@@ -150,6 +150,8 @@ class Exploration():
                     for a in range(90):
                         print ("YEAHHHHHHH")
                     rospy.sleep(0.5)
+                    self.vel_controller.set_move_cmd(linear=lin_speed, angular=0.0)
+                    self.vel_controller.publish()
 
             else:
                 left_wall_rate  = self.tb3_lidar.distance.l3 - self.tb3_lidar.distance.l4
@@ -175,11 +177,6 @@ class Exploration():
 
                     # if there is a dead end
                     else:
-                        #print ("THIS IS HAPPENING")
-                        #print ("YEAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
-                        #self.vel_controller.set_move_cmd(linear=-0.1, angular=0)
-                        #self.vel_controller.publish()
-                        #rospy.sleep(0.5)
                         self.vel_controller.set_move_cmd(linear=lin_speed , angular=-self.max_ang_vel)
 
                 else: # if no obstacles infront
@@ -211,7 +208,7 @@ class Exploration():
                 print(f"{right_wall_rate=:.3f}")
                 print(f"{left_wall_rate=:.3f}")
                 self.vel_controller.publish()
-                rospy.sleep(0.4)
+                rospy.sleep(0.45)
 
 if __name__ == '__main__':
     exploration_instance = Exploration()
