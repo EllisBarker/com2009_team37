@@ -14,7 +14,7 @@ class ObstacleAvoidance():
 
         self.rate = rospy.Rate(1000) 
         self.ctrl_c = False 
-        self.turning = False
+        self.turning = True
         # Turn direction of 0 implies right, direction of 1 implies left
         self.direction = 0
         rospy.sleep(0.01)
