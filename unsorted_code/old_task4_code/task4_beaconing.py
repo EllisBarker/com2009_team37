@@ -33,10 +33,10 @@ class colour_search(object):
         self.stop_flag = False
         self.sub = LaserDistance()
         self.color_ranges = {
-            "green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
-            "blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
-            "yellow": (np.array([180, 180, 0]), np.array([255, 255, 20])),
-            "lightblue": (np.array([0, 82, 82]), np.array([25, 122, 122])),
+            "green": (np.array([40, 150, 150]), np.array([65, 255, 255])),
+            "blue": (np.array([115, 225, 100]), np.array([130, 255, 225])),
+            "yellow": (np.array([25, 120, 100]), np.array([35, 255, 255])),
+            "lightblue": (np.array([84, 150, 100]), np.array([96, 255, 255])),
         }
 
         self.cvbridge_interface = CvBridge()
