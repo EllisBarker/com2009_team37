@@ -140,26 +140,26 @@ class colour_search(object):
             if self.hsv_img is None:
                 continue
             if self.target_color is None:
-                self.move_to_cmd(True, True, 2, linear_vel=0)
+                self.move_to_cmd(True, True, 2, linear_val=0)
                 self.target_color = self.find_most_common_color()
                 print("TARGET DETECTED: Beaconing initiated ", self.target_color)
                 rospy.sleep(2)  # adjust time as needed
                 # turn back to original orientation
-                self.move_to_cmd(True, False, 2, linear_vel=0)
+                self.move_to_cmd(True, False, 2, linear_val=0)
 
                 rospy.sleep(2)  # adjust time as needed
-                self.move_to_cmd(True, True, 0.3, angular_vel=0)
+                self.move_to_cmd(True, True, 0.3, angular_val=0)
 
             else:
                 # Check for obstacles in front
                 # If the robot is too close to an obstacle in front, it needs to avoid it
                 # Move the robot
-                self.move_to_cmd(True, True, 0.2, angular_vel=0)
+                self.move_to_cmd(True, True, 0.2, angular_val=0)
                 # Check for obstacles in front
                 # If the robot is too close to an obstacle in front, it needs to avoid it
                 if self.turn_amount!=0:
                     if self.cx >= 560-80 and self.cx <= 560+80:
-                        self.move_to_cmd(True, True, 0.2, angular_vel=0)
+                        self.move_to_cmd(True, True, 0.2, angular_val=0)
                         if self.sub.min_front_distance< self.min_distance:
                             self.robot_controller.set_move_cmd(0.0, 0.0)
                             print("BEACONING COMPLETE: The robot has now stopped.")
@@ -169,39 +169,39 @@ class colour_search(object):
                             turn_time=abs(self.turn_amount)/13
                         else:
                             turn_time = 0.2
-                        self.move_to_cmd(True, True, turn_time, linear_vel=0)
+                        self.move_to_cmd(True, True, turn_time, linear_val=0)
                     elif self.turn_amount> -0.3:
                         if abs(self.turn_amount) > 2:
                             turn_time = abs(self.turn_amount) / 13
                         else:
                             turn_time = 0.2
-                        self.move_to_cmd(True, False, turn_time, linear_vel=0)
+                        self.move_to_cmd(True, False, turn_time, linear_val=0)
                     elif self.sub.min_front_distance< self.min_distance:
                         self.robot_controller.set_move_cmd(0.0, 0.0)
                         print("BEACONING COMPLETE: The robot has now stopped.")
                         self.ctrl_c = True
                     else:
-                        self.move_to_cmd(True, True, 0.1, angular_vel=0)
+                        self.move_to_cmd(True, True, 0.1, angular_val=0)
                 elif self.sub.min_front_distance <= self.min_distance:
                     # Move backwards
-                    self.move_to_cmd(False, True, 0.7, angular_vel=0)
+                    self.move_to_cmd(False, True, 0.7, angular_val=0)
                     # If the distance on the right side is also close, adjust to the left
                     if self.sub.min_left_distance >= self.sub.min_right_distance:
-                        self.move_to_cmd(True, True, move_time, linear_vel=0)
+                        self.move_to_cmd(True, True, move_time, linear_val=0)
                     # If the distance on the left side is also close, adjust to the right and turn right
                     elif self.sub.min_left_distance <= self.sub.min_right_distance:
-                        self.move_to_cmd(True, False, move_time, linear_vel=0)
+                        self.move_to_cmd(True, False, move_time, linear_val=0)
                 elif self.sub.min_front_distance <= self.max_distance:
                     if self.sub.min_left_distance >= self.sub.min_right_distance :
-                        self.move_to_cmd(True, True, move_time, linear_vel=0)
+                        self.move_to_cmd(True, True, move_time, linear_val=0)
                     # If the distance on the left side is also close, adjust to the right and turn right
                     elif self.sub.min_left_distance <= self.sub.min_right_distance :
-                        self.move_to_cmd(True, False, move_time, linear_vel=0)
+                        self.move_to_cmd(True, False, move_time, linear_val=0)
                 else:
                     if self.min_distance>0.8:
-                        self.move_to_cmd(True, True, 0.4, linear_vel=0.7, angular_vel=0)
+                        self.move_to_cmd(True, True, 0.4, linear_val=0.7, angular_val=0)
                     else:
-                        self.move_to_cmd(True, True, 0.1, angular_vel=0)
+                        self.move_to_cmd(True, True, 0.1, angular_val=0)
 
 
             if time.time() >= t_end:
