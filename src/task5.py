@@ -99,6 +99,7 @@ class Exploration():
         hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2HSV)
 
         mask = cv2.inRange(hsv_img, self.target_colour[1], self.target_colour[2])
+        # If there is a mask, obtain its moments
         if mask.any():
             m = cv2.moments(mask)
             self.m00 = m['m00']
@@ -147,8 +148,6 @@ class Exploration():
                     rospy.sleep(0.5)
                 elif rospy.get_rostime().secs >= 5:
                     self.beacon_found = False
-                    for a in range(90):
-                        print ("YEAHHHHHHH")
                     rospy.sleep(0.5)
                     self.vel_controller.set_move_cmd(linear=lin_speed, angular=0.0)
                     self.vel_controller.publish()
