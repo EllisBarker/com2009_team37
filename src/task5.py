@@ -11,8 +11,7 @@ import argparse
 import random
 
 # Movement and sensor modules
-from tb3 import Tb3Move, Tb3Odometry
-from tb3_task2 import Tb3LaserScan
+from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
 
 class Exploration():
     def __init__(self):
@@ -41,10 +40,9 @@ class Exploration():
         self.turn_vel = 0.6
         self.move_rate = ""
 
-        self.ctrl_c = False 
-        self.turning = True
-        # Turn direction of 0 implies right, direction of 1 implies left
-        self.direction = 0
+        # Maximum allowed velocities
+        self.max_lin_vel = 0.2
+        self.max_ang_vel = 0.6
 
         self.rate = rospy.Rate(10)
         self.start_time = rospy.get_rostime()
@@ -146,31 +144,61 @@ class Exploration():
                 rospy.sleep(0.5)
 
             else:
-                self.closest_object = self.tb3_lidar.min_distance
-                self.closest_object_location = self.tb3_lidar.closest_object_position
+                left_wall_rate  = self.tb3_lidar.distance.l3 - self.tb3_lidar.distance.l4
+                right_wall_rate = self.tb3_lidar.distance.r3 - self.tb3_lidar.distance.r4
+                
+                if self.tb3_lidar.min_distance < 0.6: # if obstacle infront
 
-                if self.tb3_lidar.min_distance > 0.25: # approach distance
-                    self.vel_controller.set_move_cmd(linear=0.23, angular=0.0)
-                    self.vel_controller.publish()
-                    self.turning = False
-                else:
-                    # Only move backwards once upon detecting an obstacle and pick a direction to turn
-                    if self.turning == False:
-                        self.vel_controller.set_move_cmd(linear=-0.3, angular=0.0)
-                        self.vel_controller.publish()
-                        rospy.sleep(0.75)
-                        self.turning = True
-                        # If object detected on the left, turn right.
-                        if self.closest_object_location >= 0:
-                            self.direction = 0
-                        # If object detected on the right, turn left.
+                    # if wall infront - slow down
+                    if self.tb3_lidar.min_distance < 0.4:
+                        lin_speed = 0.0
+                    else:
+                        lin_speed = self.max_lin_vel
+
+                    # if there is a gap on the right - turn right
+                    if self.tb3_lidar.distance.r1 > 0.6 or self.tb3_lidar.distance.r3 + self.tb3_lidar.distance.r4 > 1.5:
+                        print("Wall detected: Turning right!")
+                        self.vel_controller.set_move_cmd(linear=lin_speed , angular=-self.max_ang_vel)
+
+                    # if there is a gap on the left - turn left
+                    elif self.tb3_lidar.distance.l1 > 0.6 or self.tb3_lidar.distance.l3 + self.tb3_lidar.distance.l4 > 1.5:
+                        print("Wall detected: Turning left!")
+                        self.vel_controller.set_move_cmd(linear=lin_speed , angular=self.max_ang_vel)
+
+                    # if there is a dead end
+                    else:
+                        self.vel_controller.set_move_cmd(linear=lin_speed , angular=-self.max_ang_vel)
+
+                else: # if no obstacles infront
+                    
+                    # if nothing on the right - turn right
+                    if right_wall_rate >= 0.6 or self.tb3_lidar.distance.r2 > 0.8:
+                        print("Moving Forwards: Turning right!")
+                        self.vel_controller.set_move_cmd(linear=self.max_lin_vel, angular=-self.max_ang_vel)                   
+                    
+                    # if right wall is flat - move forward 
+                    elif right_wall_rate < 0.1:
+                        wall_rate = right_wall_rate
+                        print("Moving Forwards: Using right wall!")
+                        if abs(wall_rate) < 0.001:
+                            # forwards
+                            self.vel_controller.set_move_cmd(linear=self.max_lin_vel, angular=0.0)
+                        elif wall_rate < 0:
+                            # correct left
+                            self.vel_controller.set_move_cmd(linear=self.max_lin_vel, angular=0.1)
                         else:
-                            self.direction = 1
-                    # Start rotating for an amount of time between 0 and 1 seconds
-                    self.vel_controller.set_move_cmd(linear=0.0, angular=[1.0,-1.0][self.direction])
-                    self.vel_controller.publish()
-                    rospy.sleep(random.random())
-                    rospy.sleep(0.5)
+                            # correct right
+                            self.vel_controller.set_move_cmd(linear=self.max_lin_vel, angular=-0.1)
+
+                    # if nothing on the left - turn left
+                    elif left_wall_rate > 0.6 or self.tb3_lidar.distance.l2 > 0.8:
+                        print("Moving Forwards: Turning left!")
+                        self.vel_controller.set_move_cmd(linear=self.max_lin_vel, angular=self.max_ang_vel)
+                
+                print(f"{right_wall_rate=:.3f}")
+                print(f"{left_wall_rate=:.3f}")
+                self.vel_controller.publish()
+                rospy.sleep(0.25)
 
 if __name__ == '__main__':
     exploration_instance = Exploration()
