@@ -11,10 +11,13 @@ start_time = rospy.get_rostime()
 
 launch = roslaunch.scriptapi.ROSLaunch()
 launch.start()
+for a in range(99):
+    print ("YEAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH")
 
-while (rospy.get_rostime().secs - start_time.secs) < 180:
+while not rospy.is_shutdown():
     print(f"Saving map at time: {rospy.get_time()}...")
     node = roslaunch.core.Node(package="map_server",
                                node_type="map_saver",
                                args=f"-f {map_path}")
     process = launch.launch(node)
+    rospy.sleep(1)
