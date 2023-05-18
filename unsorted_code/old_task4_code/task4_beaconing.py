@@ -7,7 +7,7 @@ import time
 # Import some image processing modules:
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
-from laser_sub import LaserSub
+from laser_distance import LaserSub
 # Import all the necessary ROS message types:
 from sensor_msgs.msg import Image
 import numpy as np
@@ -173,7 +173,7 @@ class colour_search(object):
                         else:
                             turn_time = 0.2
                         self.move(True, True, turn_time, linear_vel=0)
-                    elif self.turn_amount> -0.3:
+                    elif self.turn_amount> 0.3:
                         if abs(self.turn_amount) > 2:
                             turn_time = abs(self.turn_amount) / 13
                         else:
