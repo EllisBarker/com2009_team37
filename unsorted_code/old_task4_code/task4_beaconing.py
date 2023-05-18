@@ -33,10 +33,10 @@ class colour_search(object):
         self.stop_flag = False
         self.sub = LaserDistance()
         self.color_ranges = {
-            "green": (np.array([40, 150, 150]), np.array([65, 255, 255])),
-            "blue": (np.array([115, 225, 100]), np.array([130, 255, 225])),
-            "yellow": (np.array([25, 120, 100]), np.array([35, 255, 255])),
-            "lightblue": (np.array([84, 150, 100]), np.array([96, 255, 255])),
+            "green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
+            "blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
+            "yellow": (np.array([180, 180, 0]), np.array([255, 255, 20])),
+            "lightblue": (np.array([0, 82, 82]), np.array([25, 122, 122])),
         }
 
         self.cvbridge_interface = CvBridge()
@@ -97,6 +97,8 @@ class colour_search(object):
             # Get center of target color contours
             target_color_m = cv2.moments(target_color_contours[0])
             print("m00 :",target_color_m["m00"])
+            if target_color_m["m00"]==0:
+                target_color_m["m00"]=1
             target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
             target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
             self.m00 = target_color_m["m00"]
