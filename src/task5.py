@@ -22,11 +22,11 @@ class Exploration():
         self.m00 = 0
         self.m00_min = 40000
         self.target_colour = ""
-        self.colour_ranges = [["green",(40,150,100),(65,255,255)],
-                              ["blue",(115,225,100),(130,255,255)],
-                              ["red",(0,188,100),(4,255,255)],
+        self.colour_ranges = [["Green",(40,150,100),(65,255,255)],
+                              ["Blue",(115,225,100),(130,255,255)],
+                              ["Red",(0,188,100),(4,255,255)],
                               #["red2",(175,200,100),(180,255,255)],
-                              ["yellow",(25,120,100),(35,255,255)]]
+                              ["Yellow",(25,120,100),(35,255,255)]]
         cli = argparse.ArgumentParser()
         cli.add_argument("-target_colour", metavar = "COL", default="blue")
         colour_name = cli.parse_args(rospy.myargv()[1:]).target_colour

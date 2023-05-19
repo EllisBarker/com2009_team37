@@ -7,7 +7,7 @@ import time
 # Import some image processing modules:
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
-from laser_distance import LaserSub
+from laser_distance_task4 import LaserSub
 # Import all the necessary ROS message types:
 from sensor_msgs.msg import Image
 import numpy as np
@@ -39,11 +39,6 @@ class colour_search(object):
             "Yellow": (np.array([25,120,100]), np.array([35,255,255])),
             "Purple": (np.array([143,153,100]),np.array([157,255,255]))
         }
-        # self.color_ranges = {
-        #     "green": (np.array([50, 100, 100]), np.array([70, 255, 255])),
-        #     "blue": (np.array([110, 100, 100]), np.array([130, 255, 255])),
-        #     "lightblue": (np.array([165, 0, 99]), np.array([195, 250, 255])),
-        # }
         self.cvbridge_interface = CvBridge()
         self.robot_controller = Tb3Move()
         self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
