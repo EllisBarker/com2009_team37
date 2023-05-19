@@ -23,7 +23,6 @@ class colour_search(object):
         self.bridge = CvBridge()
         self.image_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
-        self.odo_sub = rospy.Subscriber('/odom', Odometry, self.odo_callback)
         self.current_angle = 0.0
         self.target_angle = 0.0
         self.move_cmd = Twist()
@@ -36,6 +35,9 @@ class colour_search(object):
             "Green": (np.array([0, 180, 0]), np.array([25, 255, 25])),
             "Blue": (np.array([0, 0, 82]), np.array([25, 25, 221])),
             "Turquoise": (np.array([0, 82, 82]), np.array([25, 122, 122])),
+            "Red": (np.array([0,188,100]), np.array([4,255,255])),
+            "Yellow": (np.array([25,120,100]), np.array([35,255,255])),
+            "Purple": (np.array([143,153,100]),np.array([157,255,255]))
         }
         # self.color_ranges = {
         #     "green": (np.array([50, 100, 100]), np.array([70, 255, 255])),
@@ -44,12 +46,10 @@ class colour_search(object):
         # }
         self.cvbridge_interface = CvBridge()
         self.robot_controller = Tb3Move()
-        self.turn_vel_fast = -0.5
-        self.turn_vel_slow = -0.1
         self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
         self.ctrl_c = False
         rospy.on_shutdown(self.shutdown_ops)
-        self.min_distance = 0.2
+        self.min_distance = 0.3
         self.max_distance = 0.6
         self.rate = rospy.Rate(5)
         self.m00 = 0
@@ -61,15 +61,8 @@ class colour_search(object):
         self.cx=0
 
         self.approach_phase_indicator = False
-
-    def odo_callback(self, odo_msg):
-        orientation = odo_msg.pose.pose.orientation
-        self.current_angle = math.atan2(2 * (orientation.w * orientation.z + orientation.x * orientation.y),
-                                   1 - 2 * (orientation.y ** 2 + orientation.z ** 2))
-
-    def calculate_angle_diff(self, angle1, angle2):
-        diff = angle1 - angle2
-        return diff + 2 * math.pi if diff < -math.pi else (diff - 2 * math.pi if diff > math.pi else diff)
+        self.detect_target_colour_indicator = False
+        self.time_out = False
 
     def shutdown_ops(self):
         self.robot_controller.stop()
@@ -95,7 +88,7 @@ class colour_search(object):
         target_color_mask = cv2.inRange(self.hsv_img, self.lower, self.upper)
         target_color_contours, _ = cv2.findContours(target_color_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        if len(target_color_contours) > 0:
+        if len(target_color_contours) > 0 and self.detect_target_colour_indicator == True:
             # Draw contours on original image
             cv2.drawContours(crop_img, target_color_contours, -1, (0, 255, 0), 2)
 
@@ -106,12 +99,16 @@ class colour_search(object):
             # Get center of target color contours
             target_color_m = cv2.moments(target_color_contours[0])
             print("m00 :",target_color_m["m00"])
-            target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
-            target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
-            self.m00 = target_color_m["m00"]
+            if target_color_m["m00"] != 0:
+                target_color_cx = int(target_color_m["m10"] / target_color_m["m00"])
+                target_color_cy = int(target_color_m["m01"] / target_color_m["m00"])
+                self.m00 = target_color_m["m00"]
+            else: 
+                target_color_cx = 560
+                target_color_cy = 560
+                self.m00 = target_color_m["m00"]
             self.cx=target_color_cx
-            if  target_color_cy>251 or  self.m00 >self.m00_max:
-
+            if target_color_cy>251 or self.m00 >self.m00_max:
                 center_x = crop_width / 2
                 diff_x = target_color_cx - center_x
                 # Calculate turn amount proportional to difference
@@ -150,14 +147,16 @@ class colour_search(object):
                 continue
             if self.target_color is None:
                 self.move(True, True, 2, linear_vel=0)
+                rospy.sleep(2)
                 self.target_color = self.find_most_common_color()
                 print(f"SEARCH INITIATED: The target beacon colour is {self.target_color}.")
-                rospy.sleep(2)  # adjust time as needed
+                #rospy.sleep(2)  # adjust time as needed
                 # turn back to original orientation
                 self.move(True, False, 2, linear_vel=0)
 
                 rospy.sleep(2)  # adjust time as needed
                 self.move(True, True, 0.3, angular_vel=0)
+                self.detect_target_colour_indicator = True
                 # self.move(True, False, move_time, linear_vel=0)
             else:
                 # Check for obstacles in front
@@ -169,9 +168,8 @@ class colour_search(object):
                 if self.turn_amount!=0:
                     if self.cx >= 560-80 and self.cx <= 560+80:
                         self.move(True, True, 0.2, angular_vel=0)
-                        if self.sub.min_distance< self.min_distance:
+                        if self.sub.min_distance < self.min_distance:
                             self.robot_controller.set_move_cmd(0.0, 0.0)
-                            print("BEACONING COMPLETE: The robot has now stopped.")
                             self.ctrl_c = True
                     elif self.turn_amount<-0.3:
                         if abs(self.turn_amount)>2:
@@ -187,7 +185,6 @@ class colour_search(object):
                         self.move(True, False, turn_time, linear_vel=0)
                     elif self.sub.min_distance< self.min_distance:
                         self.robot_controller.set_move_cmd(0.0, 0.0)
-                        print("BEACONING COMPLETE: The robot has now stopped.")
                         self.ctrl_c = True
                     else:
                         self.move(True, True, 0.1, angular_vel=0)
@@ -212,11 +209,13 @@ class colour_search(object):
                     else:
                         self.move(True, True, 0.1, angular_vel=0)
 
-
             if time.time() >= t_end:
                 print("Time is up")
+                self.time_out = True
                 self.ctrl_c = True
 
+        if self.time_out != True:
+            print("BEACONING COMPLETE: The robot has now stopped.")
 
     def move(self, forward_backward, left_right, seconds, linear_vel=0.2, angular_vel=0.6):
         vel = Twist()
